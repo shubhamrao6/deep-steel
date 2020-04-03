@@ -1,0 +1,727 @@
+Jupyter Notebook
+VGG_16_Srlr
+(unsaved changes)
+Current Kernel Logo
+Python 3 
+File
+Edit
+View
+Insert
+Cell
+Kernel
+Widgets
+Help
+
+1
+import numpy as np
+2
+import pandas as pd
+3
+import matplotlib.pyplot as plt
+4
+import seaborn as sns
+5
+import cv2
+6
+?
+7
+from sklearn.model_selection import train_test_split
+8
+?
+9
+import tensorflow as tf
+10
+from tensorflow.keras.models import Sequential
+11
+from tensorflow.keras.layers import *
+12
+from tensorflow.keras.optimizers import *
+13
+# from keras.applications.vgg16 import VGG16
+14
+from tensorflow.python.client import device_lib
+15
+?
+16
+# from keras.utils import plot_model
+17
+from tensorflow.keras.models import model_from_json
+18
+from tensorflow.keras.callbacks import TensorBoard
+19
+from tensorflow.keras.callbacks import ModelCheckpoint
+20
+?
+21
+from tensorflow.keras.layers import Dense, Flatten, LSTM, Activation, BatchNormalization
+22
+from tensorflow.keras.layers import Dropout, RepeatVector, TimeDistributed
+23
+from tensorflow.keras import Input, Model
+24
+from tensorflow.keras.layers import Lambda
+25
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+The default version of TensorFlow in Colab will soon switch to TensorFlow 2.x.
+We recommend you upgrade now or ensure your notebook will continue to use TensorFlow 1.x via the %tensorflow_version 1.x magic: more info.
+
+1
+from google.colab import drive
+2
+drive.mount('/content/drive')
+Go to this URL in a browser: https://accounts.google.com/o/oauth2/auth?client_id=947318989803-6bn6qk8qdgf4n4g3pfee6491hc0brc4i.apps.googleusercontent.com&redirect_uri=urn%3aietf%3awg%3aoauth%3a2.0%3aoob&response_type=code&scope=email%20https%3a%2f%2fwww.googleapis.com%2fauth%2fdocs.test%20https%3a%2f%2fwww.googleapis.com%2fauth%2fdrive%20https%3a%2f%2fwww.googleapis.com%2fauth%2fdrive.photos.readonly%20https%3a%2f%2fwww.googleapis.com%2fauth%2fpeopleapi.readonly
+
+Enter your authorization code:
+··········
+Mounted at /content/drive
+1
+X = np.load('/content/drive/My Drive/Deep Steel/X_data.npy')
+2
+y = np.load('/content/drive/My Drive/Deep Steel/Y_data.npy')
+3
+def indices_to_one_hot(data, nb_classes):
+4
+    """Convert an iterable of indices to one-hot encoded labels."""
+5
+    targets = np.array(data).reshape(-1)
+6
+    return np.eye(nb_classes)[targets]
+7
+?
+8
+y = indices_to_one_hot(y.astype(int), 5)
+9
+#X = X/255
+10
+print(X.shape)
+11
+print(y.shape)
+(1857, 224, 224)
+(1857, 5)
+1
+print(y[1])
+2
+print(X[1])
+3
+plt.imshow(X[1], 'gray')
+[1. 0. 0. 0. 0.]
+[[114 115 115 ...  99  98  94]
+ [111 111 110 ...  96  89  85]
+ [112 109 106 ...  98  91  88]
+ ...
+ [ 98  93  92 ...  90  97  99]
+ [ 99  94  94 ...  92  99 101]
+ [ 99  96  96 ...  90 100 103]]
+<matplotlib.image.AxesImage at 0x7f5ddf602978>
+
+1
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1615, random_state=42)
+2
+?
+3
+print(X_train.shape)
+4
+print(y_train.shape)
+5
+print(X_test.shape)
+6
+print(y_test.shape)
+7
+?
+8
+train_datagen = ImageDataGenerator()
+9
+?
+10
+test_datagen = ImageDataGenerator()
+11
+?
+12
+train_generator = tf.keras.preprocessing.image.NumpyArrayIterator(X_train.reshape(-1,224,224,1), y_train.reshape(-1,5), 
+13
+                                                                 train_datagen,batch_size=32, shuffle=True)
+14
+?
+15
+test_generator = tf.keras.preprocessing.image.NumpyArrayIterator(X_test.reshape(-1,224,224,1), y_test.reshape(-1,5), test_datagen,
+16
+                                                              batch_size=32, shuffle=True)
+(1557, 224, 224)
+(1557, 5)
+(300, 224, 224)
+(300, 5)
+1
+model = tf.keras.applications.VGG16(include_top=True, weights=None, input_shape=(224,224,1), classes=5)
+2
+# model = Sequential()
+3
+# model.add(network)
+4
+# #model.add(GlobalAveragePooling2D())
+5
+# model.add(Flatten())
+6
+# model.add(Dense(512))
+7
+# model.add(Dense(512))
+8
+# model.add(Dense(5))
+9
+?
+10
+model.summary()
+WARNING:tensorflow:From /usr/local/lib/python3.6/dist-packages/tensorflow_core/python/ops/resource_variable_ops.py:1630: calling BaseResourceVariable.__init__ (from tensorflow.python.ops.resource_variable_ops) with constraint is deprecated and will be removed in a future version.
+Instructions for updating:
+If using Keras pass *_constraint arguments to layers.
+Model: "vgg16"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input_1 (InputLayer)         [(None, 224, 224, 1)]     0         
+_________________________________________________________________
+block1_conv1 (Conv2D)        (None, 224, 224, 64)      640       
+_________________________________________________________________
+block1_conv2 (Conv2D)        (None, 224, 224, 64)      36928     
+_________________________________________________________________
+block1_pool (MaxPooling2D)   (None, 112, 112, 64)      0         
+_________________________________________________________________
+block2_conv1 (Conv2D)        (None, 112, 112, 128)     73856     
+_________________________________________________________________
+block2_conv2 (Conv2D)        (None, 112, 112, 128)     147584    
+_________________________________________________________________
+block2_pool (MaxPooling2D)   (None, 56, 56, 128)       0         
+_________________________________________________________________
+block3_conv1 (Conv2D)        (None, 56, 56, 256)       295168    
+_________________________________________________________________
+block3_conv2 (Conv2D)        (None, 56, 56, 256)       590080    
+_________________________________________________________________
+block3_conv3 (Conv2D)        (None, 56, 56, 256)       590080    
+_________________________________________________________________
+block3_pool (MaxPooling2D)   (None, 28, 28, 256)       0         
+_________________________________________________________________
+block4_conv1 (Conv2D)        (None, 28, 28, 512)       1180160   
+_________________________________________________________________
+block4_conv2 (Conv2D)        (None, 28, 28, 512)       2359808   
+_________________________________________________________________
+block4_conv3 (Conv2D)        (None, 28, 28, 512)       2359808   
+_________________________________________________________________
+block4_pool (MaxPooling2D)   (None, 14, 14, 512)       0         
+_________________________________________________________________
+block5_conv1 (Conv2D)        (None, 14, 14, 512)       2359808   
+_________________________________________________________________
+block5_conv2 (Conv2D)        (None, 14, 14, 512)       2359808   
+_________________________________________________________________
+block5_conv3 (Conv2D)        (None, 14, 14, 512)       2359808   
+_________________________________________________________________
+block5_pool (MaxPooling2D)   (None, 7, 7, 512)         0         
+_________________________________________________________________
+flatten (Flatten)            (None, 25088)             0         
+_________________________________________________________________
+fc1 (Dense)                  (None, 4096)              102764544 
+_________________________________________________________________
+fc2 (Dense)                  (None, 4096)              16781312  
+_________________________________________________________________
+predictions (Dense)          (None, 5)                 20485     
+=================================================================
+Total params: 134,279,877
+Trainable params: 134,279,877
+Non-trainable params: 0
+_________________________________________________________________
+1
+model.compile(loss='categorical_crossentropy',
+2
+              optimizer=SGD(lr=0.001),
+3
+              metrics=['accuracy'])
+1
+#filepath = "/content/drive/My Drive/Deep Steel/resnet50_lrD_best.hdf5"
+2
+# filepath = "/content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5"
+3
+?
+4
+# checkpoint = ModelCheckpoint(filepath,
+5
+#                             monitor='val_acc',
+6
+#                             verbose=1,
+7
+#                             save_best_only=True,
+8
+#                             mode='max')
+9
+?
+10
+history = model.fit_generator(train_generator, epochs=16, validation_data=test_generator)#, callbacks=[checkpoint]) 
+Epoch 1/16
+48/49 [============================>.] - ETA: 0s - loss: 1.5044 - acc: 0.3370Epoch 1/16
+49/49 [==============================] - 39s 795ms/step - loss: 1.5012 - acc: 0.3436 - val_loss: 1.4429 - val_acc: 0.3067
+Epoch 2/16
+48/49 [============================>.] - ETA: 0s - loss: 1.4456 - acc: 0.3980Epoch 1/16
+49/49 [==============================] - 23s 476ms/step - loss: 1.4403 - acc: 0.4066 - val_loss: 1.3374 - val_acc: 0.4933
+Epoch 3/16
+48/49 [============================>.] - ETA: 0s - loss: 1.3640 - acc: 0.4459Epoch 1/16
+49/49 [==============================] - 23s 471ms/step - loss: 1.3625 - acc: 0.4489 - val_loss: 1.2442 - val_acc: 0.5167
+Epoch 4/16
+48/49 [============================>.] - ETA: 0s - loss: 1.3581 - acc: 0.4452Epoch 1/16
+49/49 [==============================] - 23s 472ms/step - loss: 1.3581 - acc: 0.4477 - val_loss: 1.5004 - val_acc: 0.4533
+Epoch 5/16
+48/49 [============================>.] - ETA: 0s - loss: 1.2986 - acc: 0.4898Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.2957 - acc: 0.4952 - val_loss: 1.1563 - val_acc: 0.5933
+Epoch 6/16
+48/49 [============================>.] - ETA: 0s - loss: 1.2728 - acc: 0.4944Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.2741 - acc: 0.4939 - val_loss: 1.1814 - val_acc: 0.5633
+Epoch 7/16
+48/49 [============================>.] - ETA: 0s - loss: 1.1786 - acc: 0.5344Epoch 1/16
+49/49 [==============================] - 23s 472ms/step - loss: 1.1813 - acc: 0.5324 - val_loss: 2.0895 - val_acc: 0.2667
+Epoch 8/16
+48/49 [============================>.] - ETA: 0s - loss: 1.2367 - acc: 0.5246Epoch 1/16
+49/49 [==============================] - 23s 472ms/step - loss: 1.2285 - acc: 0.5299 - val_loss: 1.0324 - val_acc: 0.6267
+Epoch 9/16
+48/49 [============================>.] - ETA: 0s - loss: 1.1854 - acc: 0.5416Epoch 1/16
+49/49 [==============================] - 23s 472ms/step - loss: 1.1805 - acc: 0.5434 - val_loss: 1.1212 - val_acc: 0.5033
+Epoch 10/16
+48/49 [============================>.] - ETA: 0s - loss: 1.1627 - acc: 0.5436Epoch 1/16
+49/49 [==============================] - 23s 472ms/step - loss: 1.1796 - acc: 0.5369 - val_loss: 1.3114 - val_acc: 0.3833
+Epoch 11/16
+48/49 [============================>.] - ETA: 0s - loss: 1.1394 - acc: 0.5626Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.1369 - acc: 0.5639 - val_loss: 1.0455 - val_acc: 0.6067
+Epoch 12/16
+48/49 [============================>.] - ETA: 0s - loss: 1.0900 - acc: 0.5738Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.0959 - acc: 0.5697 - val_loss: 1.2644 - val_acc: 0.4833
+Epoch 13/16
+48/49 [============================>.] - ETA: 0s - loss: 1.0983 - acc: 0.5633Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.0953 - acc: 0.5671 - val_loss: 0.9764 - val_acc: 0.6200
+Epoch 14/16
+48/49 [============================>.] - ETA: 0s - loss: 1.0777 - acc: 0.5790Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.0789 - acc: 0.5780 - val_loss: 1.1726 - val_acc: 0.4833
+Epoch 15/16
+48/49 [============================>.] - ETA: 0s - loss: 1.0789 - acc: 0.5685Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.0798 - acc: 0.5678 - val_loss: 1.0135 - val_acc: 0.5867
+Epoch 16/16
+48/49 [============================>.] - ETA: 0s - loss: 1.0132 - acc: 0.5993Epoch 1/16
+49/49 [==============================] - 23s 473ms/step - loss: 1.0171 - acc: 0.5979 - val_loss: 1.0229 - val_acc: 0.6000
+1
+import tensorflow.keras.backend as K
+2
+print(K.get_value(model.optimizer.lr))
+3
+K.set_value(model.optimizer.lr, K.get_value(model.optimizer.lr)/5)
+4
+print(K.get_value(model.optimizer.lr))
+0.001
+0.00020000001
+1
+history2 = model.fit_generator(train_generator, epochs=32, validation_data=test_generator)#, callbacks=[checkpoint])
+Epoch 1/32
+48/49 [============================>.] - ETA: 0s - loss: 0.9173 - acc: 0.6348Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.9186 - acc: 0.6339 - val_loss: 0.9215 - val_acc: 0.6233
+Epoch 2/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8810 - acc: 0.6426Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8881 - acc: 0.6390 - val_loss: 0.9192 - val_acc: 0.6200
+Epoch 3/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8801 - acc: 0.6302Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8782 - acc: 0.6301 - val_loss: 0.9013 - val_acc: 0.6233
+Epoch 4/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8649 - acc: 0.6374Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8670 - acc: 0.6390 - val_loss: 0.8874 - val_acc: 0.6133
+Epoch 5/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8589 - acc: 0.6387Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.8522 - acc: 0.6410 - val_loss: 0.8941 - val_acc: 0.6333
+Epoch 6/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8556 - acc: 0.6498Epoch 1/32
+49/49 [==============================] - 23s 476ms/step - loss: 0.8533 - acc: 0.6493 - val_loss: 0.8923 - val_acc: 0.6267
+Epoch 7/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8508 - acc: 0.6544Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8478 - acc: 0.6551 - val_loss: 0.8661 - val_acc: 0.6300
+Epoch 8/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8315 - acc: 0.6610Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8304 - acc: 0.6602 - val_loss: 0.8595 - val_acc: 0.6833
+Epoch 9/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8317 - acc: 0.6721Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.8295 - acc: 0.6731 - val_loss: 0.8497 - val_acc: 0.6500
+Epoch 10/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8234 - acc: 0.6767Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8237 - acc: 0.6776 - val_loss: 0.8590 - val_acc: 0.6733
+Epoch 11/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8353 - acc: 0.6682Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8327 - acc: 0.6686 - val_loss: 0.8319 - val_acc: 0.6467
+Epoch 12/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8195 - acc: 0.6754Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8161 - acc: 0.6763 - val_loss: 0.8961 - val_acc: 0.6167
+Epoch 13/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8049 - acc: 0.6866Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8010 - acc: 0.6872 - val_loss: 0.8686 - val_acc: 0.6400
+Epoch 14/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7944 - acc: 0.6846Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.8016 - acc: 0.6827 - val_loss: 0.9852 - val_acc: 0.5900
+Epoch 15/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8156 - acc: 0.6803Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.8168 - acc: 0.6802 - val_loss: 0.8730 - val_acc: 0.6433
+Epoch 16/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7975 - acc: 0.6866Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.7944 - acc: 0.6885 - val_loss: 0.8116 - val_acc: 0.6800
+Epoch 17/32
+48/49 [============================>.] - ETA: 0s - loss: 0.8066 - acc: 0.6800Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.8056 - acc: 0.6808 - val_loss: 0.8564 - val_acc: 0.6500
+Epoch 18/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7950 - acc: 0.6872Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7920 - acc: 0.6879 - val_loss: 0.8165 - val_acc: 0.6733
+Epoch 19/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7771 - acc: 0.6931Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7803 - acc: 0.6917 - val_loss: 0.8073 - val_acc: 0.6867
+Epoch 20/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7671 - acc: 0.7049Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.7659 - acc: 0.7046 - val_loss: 1.0419 - val_acc: 0.5600
+Epoch 21/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7662 - acc: 0.7036Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7690 - acc: 0.7020 - val_loss: 1.0978 - val_acc: 0.5633
+Epoch 22/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7792 - acc: 0.6990Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7786 - acc: 0.6975 - val_loss: 0.8277 - val_acc: 0.6900
+Epoch 23/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7584 - acc: 0.7121Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7555 - acc: 0.7148 - val_loss: 0.8217 - val_acc: 0.6933
+Epoch 24/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7490 - acc: 0.7148Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7516 - acc: 0.7129 - val_loss: 0.8129 - val_acc: 0.6867
+Epoch 25/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7667 - acc: 0.6984Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7648 - acc: 0.6994 - val_loss: 0.9031 - val_acc: 0.6800
+Epoch 26/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7451 - acc: 0.6944Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.7451 - acc: 0.6949 - val_loss: 0.8141 - val_acc: 0.7067
+Epoch 27/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7299 - acc: 0.7213Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7313 - acc: 0.7219 - val_loss: 0.7928 - val_acc: 0.7133
+Epoch 28/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7511 - acc: 0.6911Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7479 - acc: 0.6943 - val_loss: 0.8027 - val_acc: 0.6633
+Epoch 29/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7476 - acc: 0.7010Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7405 - acc: 0.7039 - val_loss: 0.8321 - val_acc: 0.6867
+Epoch 30/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7557 - acc: 0.6984Epoch 1/32
+49/49 [==============================] - 23s 473ms/step - loss: 0.7537 - acc: 0.6994 - val_loss: 0.8214 - val_acc: 0.6533
+Epoch 31/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7451 - acc: 0.6997Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.7460 - acc: 0.6994 - val_loss: 0.8040 - val_acc: 0.7033
+Epoch 32/32
+48/49 [============================>.] - ETA: 0s - loss: 0.7446 - acc: 0.7148Epoch 1/32
+49/49 [==============================] - 23s 474ms/step - loss: 0.7423 - acc: 0.7168 - val_loss: 0.7714 - val_acc: 0.6800
+1
+import tensorflow.keras.backend as K
+2
+print(K.get_value(model.optimizer.lr))
+3
+K.set_value(model.optimizer.lr, K.get_value(model.optimizer.lr)/2.5)
+4
+print(K.get_value(model.optimizer.lr))
+0.00020000001
+8.0000005e-05
+1
+filepath = "/content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5"
+2
+?
+3
+checkpoint = ModelCheckpoint(filepath,
+4
+                            monitor='val_acc',
+5
+                            verbose=1,
+6
+                            save_best_only=True,
+7
+                            mode='max')
+8
+history2 = model.fit_generator(train_generator, epochs=52, validation_data=test_generator, callbacks=[checkpoint])
+Epoch 1/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6757 - acc: 0.7410Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7672 - acc: 0.7033
+Epoch 00001: val_acc improved from -inf to 0.70333, saving model to /content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5
+49/49 [==============================] - 26s 531ms/step - loss: 0.6733 - acc: 0.7418 - val_loss: 0.7672 - val_acc: 0.7033
+Epoch 2/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6597 - acc: 0.7495Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7954 - acc: 0.7067
+Epoch 00002: val_acc improved from 0.70333 to 0.70667, saving model to /content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5
+49/49 [==============================] - 25s 520ms/step - loss: 0.6612 - acc: 0.7482 - val_loss: 0.7954 - val_acc: 0.7067
+Epoch 3/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6692 - acc: 0.7613Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7597 - acc: 0.7300
+Epoch 00003: val_acc improved from 0.70667 to 0.73000, saving model to /content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5
+49/49 [==============================] - 26s 540ms/step - loss: 0.6667 - acc: 0.7611 - val_loss: 0.7597 - val_acc: 0.7300
+Epoch 4/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6492 - acc: 0.7534Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7613 - acc: 0.7167
+Epoch 00004: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6527 - acc: 0.7527 - val_loss: 0.7613 - val_acc: 0.7167
+Epoch 5/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6554 - acc: 0.7580Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7697 - acc: 0.7200
+Epoch 00005: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 475ms/step - loss: 0.6586 - acc: 0.7566 - val_loss: 0.7697 - val_acc: 0.7200
+Epoch 6/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6556 - acc: 0.7567Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7625 - acc: 0.7300
+Epoch 00006: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6509 - acc: 0.7585 - val_loss: 0.7625 - val_acc: 0.7300
+Epoch 7/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6489 - acc: 0.7574Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7824 - acc: 0.7067
+Epoch 00007: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 473ms/step - loss: 0.6474 - acc: 0.7579 - val_loss: 0.7824 - val_acc: 0.7067
+Epoch 8/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6413 - acc: 0.7607Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7621 - acc: 0.7200
+Epoch 00008: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 473ms/step - loss: 0.6418 - acc: 0.7611 - val_loss: 0.7621 - val_acc: 0.7200
+Epoch 9/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6487 - acc: 0.7489Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7940 - acc: 0.6800
+Epoch 00009: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 473ms/step - loss: 0.6476 - acc: 0.7482 - val_loss: 0.7940 - val_acc: 0.6800
+Epoch 10/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6341 - acc: 0.7574Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7763 - acc: 0.7100
+Epoch 00010: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6332 - acc: 0.7585 - val_loss: 0.7763 - val_acc: 0.7100
+Epoch 11/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6350 - acc: 0.7613Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.8489 - acc: 0.6533
+Epoch 00011: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6349 - acc: 0.7611 - val_loss: 0.8489 - val_acc: 0.6533
+Epoch 12/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6341 - acc: 0.7639Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7892 - acc: 0.6767
+Epoch 00012: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6309 - acc: 0.7643 - val_loss: 0.7892 - val_acc: 0.6767
+Epoch 13/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6296 - acc: 0.7734Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7432 - acc: 0.7200
+Epoch 00013: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6337 - acc: 0.7720 - val_loss: 0.7432 - val_acc: 0.7200
+Epoch 14/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6216 - acc: 0.7718Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7390 - acc: 0.7267
+Epoch 00014: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 474ms/step - loss: 0.6217 - acc: 0.7714 - val_loss: 0.7390 - val_acc: 0.7267
+Epoch 15/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6241 - acc: 0.7666Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7610 - acc: 0.7133
+Epoch 00015: val_acc did not improve from 0.73000
+49/49 [==============================] - 23s 475ms/step - loss: 0.6214 - acc: 0.7688 - val_loss: 0.7610 - val_acc: 0.7133
+Epoch 16/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6440 - acc: 0.7515Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7441 - acc: 0.7333
+Epoch 00016: val_acc improved from 0.73000 to 0.73333, saving model to /content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5
+49/49 [==============================] - 26s 523ms/step - loss: 0.6430 - acc: 0.7527 - val_loss: 0.7441 - val_acc: 0.7333
+Epoch 17/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6166 - acc: 0.7646Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.8174 - acc: 0.6767
+Epoch 00017: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.6174 - acc: 0.7624 - val_loss: 0.8174 - val_acc: 0.6767
+Epoch 18/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6057 - acc: 0.7705Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7381 - acc: 0.7233
+Epoch 00018: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 476ms/step - loss: 0.6051 - acc: 0.7694 - val_loss: 0.7381 - val_acc: 0.7233
+Epoch 19/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6261 - acc: 0.7633Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7890 - acc: 0.6700
+Epoch 00019: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.6271 - acc: 0.7636 - val_loss: 0.7890 - val_acc: 0.6700
+Epoch 20/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5984 - acc: 0.7659Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7476 - acc: 0.7133
+Epoch 00020: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.6013 - acc: 0.7649 - val_loss: 0.7476 - val_acc: 0.7133
+Epoch 21/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6060 - acc: 0.7803Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7231 - acc: 0.7167
+Epoch 00021: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.6057 - acc: 0.7797 - val_loss: 0.7231 - val_acc: 0.7167
+Epoch 22/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6146 - acc: 0.7777Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7260 - acc: 0.7200
+Epoch 00022: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.6107 - acc: 0.7791 - val_loss: 0.7260 - val_acc: 0.7200
+Epoch 23/52
+48/49 [============================>.] - ETA: 0s - loss: 0.6054 - acc: 0.7685Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7133 - acc: 0.7133
+Epoch 00023: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 473ms/step - loss: 0.6023 - acc: 0.7707 - val_loss: 0.7133 - val_acc: 0.7133
+Epoch 24/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5874 - acc: 0.7830Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7465 - acc: 0.7033
+Epoch 00024: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 473ms/step - loss: 0.5890 - acc: 0.7829 - val_loss: 0.7465 - val_acc: 0.7033
+Epoch 25/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5926 - acc: 0.7836Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6998 - acc: 0.7167
+Epoch 00025: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 473ms/step - loss: 0.5912 - acc: 0.7836 - val_loss: 0.6998 - val_acc: 0.7167
+Epoch 26/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5971 - acc: 0.7790Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7032 - acc: 0.7300
+Epoch 00026: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5979 - acc: 0.7765 - val_loss: 0.7032 - val_acc: 0.7300
+Epoch 27/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5937 - acc: 0.7777Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6994 - acc: 0.7300
+Epoch 00027: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5962 - acc: 0.7778 - val_loss: 0.6994 - val_acc: 0.7300
+Epoch 28/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5941 - acc: 0.7725Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7009 - acc: 0.7200
+Epoch 00028: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 476ms/step - loss: 0.5922 - acc: 0.7746 - val_loss: 0.7009 - val_acc: 0.7200
+Epoch 29/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5848 - acc: 0.7830Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.8651 - acc: 0.6267
+Epoch 00029: val_acc did not improve from 0.73333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5873 - acc: 0.7823 - val_loss: 0.8651 - val_acc: 0.6267
+Epoch 30/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5857 - acc: 0.7790Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7044 - acc: 0.7433
+Epoch 00030: val_acc improved from 0.73333 to 0.74333, saving model to /content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5
+49/49 [==============================] - 26s 523ms/step - loss: 0.5799 - acc: 0.7816 - val_loss: 0.7044 - val_acc: 0.7433
+Epoch 31/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5682 - acc: 0.7836Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7736 - acc: 0.6933
+Epoch 00031: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5692 - acc: 0.7842 - val_loss: 0.7736 - val_acc: 0.6933
+Epoch 32/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5608 - acc: 0.7954Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7125 - acc: 0.7167
+Epoch 00032: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5626 - acc: 0.7945 - val_loss: 0.7125 - val_acc: 0.7167
+Epoch 33/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5705 - acc: 0.7830Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7053 - acc: 0.7167
+Epoch 00033: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5708 - acc: 0.7823 - val_loss: 0.7053 - val_acc: 0.7167
+Epoch 34/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5674 - acc: 0.7895Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6904 - acc: 0.7333
+Epoch 00034: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5649 - acc: 0.7913 - val_loss: 0.6904 - val_acc: 0.7333
+Epoch 35/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5748 - acc: 0.7803Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6947 - acc: 0.7333
+Epoch 00035: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 473ms/step - loss: 0.5740 - acc: 0.7823 - val_loss: 0.6947 - val_acc: 0.7333
+Epoch 36/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5512 - acc: 0.7928Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6818 - acc: 0.7200
+Epoch 00036: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5518 - acc: 0.7938 - val_loss: 0.6818 - val_acc: 0.7200
+Epoch 37/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5855 - acc: 0.7770Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6741 - acc: 0.7367
+Epoch 00037: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5844 - acc: 0.7797 - val_loss: 0.6741 - val_acc: 0.7367
+Epoch 38/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5549 - acc: 0.7882Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7086 - acc: 0.7167
+Epoch 00038: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5542 - acc: 0.7887 - val_loss: 0.7086 - val_acc: 0.7167
+Epoch 39/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5561 - acc: 0.7921Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7351 - acc: 0.7133
+Epoch 00039: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 473ms/step - loss: 0.5559 - acc: 0.7919 - val_loss: 0.7351 - val_acc: 0.7133
+Epoch 40/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5698 - acc: 0.7849Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7275 - acc: 0.7133
+Epoch 00040: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 473ms/step - loss: 0.5663 - acc: 0.7861 - val_loss: 0.7275 - val_acc: 0.7133
+Epoch 41/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5501 - acc: 0.7941Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6999 - acc: 0.7167
+Epoch 00041: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5471 - acc: 0.7958 - val_loss: 0.6999 - val_acc: 0.7167
+Epoch 42/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5481 - acc: 0.7862Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7149 - acc: 0.6900
+Epoch 00042: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 473ms/step - loss: 0.5520 - acc: 0.7848 - val_loss: 0.7149 - val_acc: 0.6900
+Epoch 43/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5446 - acc: 0.7915Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6831 - acc: 0.7300
+Epoch 00043: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 474ms/step - loss: 0.5507 - acc: 0.7900 - val_loss: 0.6831 - val_acc: 0.7300
+Epoch 44/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5472 - acc: 0.7869Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6671 - acc: 0.7300
+Epoch 00044: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5449 - acc: 0.7881 - val_loss: 0.6671 - val_acc: 0.7300
+Epoch 45/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5636 - acc: 0.7915Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6843 - acc: 0.7233
+Epoch 00045: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5587 - acc: 0.7919 - val_loss: 0.6843 - val_acc: 0.7233
+Epoch 46/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5521 - acc: 0.7823Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6934 - acc: 0.7400
+Epoch 00046: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5502 - acc: 0.7842 - val_loss: 0.6934 - val_acc: 0.7400
+Epoch 47/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5372 - acc: 0.8033Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7030 - acc: 0.7367
+Epoch 00047: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5390 - acc: 0.8009 - val_loss: 0.7030 - val_acc: 0.7367
+Epoch 48/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5363 - acc: 0.7962Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.8076 - acc: 0.6733
+Epoch 00048: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 475ms/step - loss: 0.5401 - acc: 0.7951 - val_loss: 0.8076 - val_acc: 0.6733
+Epoch 49/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5275 - acc: 0.7993Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.7375 - acc: 0.7067
+Epoch 00049: val_acc did not improve from 0.74333
+49/49 [==============================] - 23s 477ms/step - loss: 0.5292 - acc: 0.7996 - val_loss: 0.7375 - val_acc: 0.7067
+Epoch 50/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5446 - acc: 0.7915Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6700 - acc: 0.7567
+Epoch 00050: val_acc improved from 0.74333 to 0.75667, saving model to /content/drive/My Drive/Deep Steel/VGG16/VGG16_Srlr_best.hdf5
+49/49 [==============================] - 26s 536ms/step - loss: 0.5402 - acc: 0.7938 - val_loss: 0.6700 - val_acc: 0.7567
+Epoch 51/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5527 - acc: 0.7948Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6888 - acc: 0.7367
+Epoch 00051: val_acc did not improve from 0.75667
+49/49 [==============================] - 23s 475ms/step - loss: 0.5532 - acc: 0.7938 - val_loss: 0.6888 - val_acc: 0.7367
+Epoch 52/52
+48/49 [============================>.] - ETA: 0s - loss: 0.5098 - acc: 0.8138Epoch 1/52
+10/49 [=====>........................] - ETA: 5s - loss: 0.6885 - acc: 0.7200
+Epoch 00052: val_acc did not improve from 0.75667
+49/49 [==============================] - 23s 475ms/step - loss: 0.5104 - acc: 0.8131 - val_loss: 0.6885 - val_acc: 0.7200
+1
+?
+1
+model.save('/content/drive/My Drive/Deep Steel/VGG16/VGG16_lrD_final.h5')
+1
+train_loss = history.history['loss']
+2
+train_acc = history.history['acc']
+3
+val_loss = history.history['val_loss']
+4
+val_acc = history.history['val_acc']
+5
+np.save('/content/drive/My Drive/Deep Steel/VGG16/VGG16lrD_tloss0-80.npy',np.array(train_loss))
+6
+np.save('/content/drive/My Drive/Deep Steel/VGG16/VGG16lrD_tacc0-80.npy', np.array(train_acc))
+7
+np.save('/content/drive/My Drive/Deep Steel/VGG16/VGG16lrD_loss0-80.npy',np.array(val_loss))
+8
+np.save('/content/drive/My Drive/Deep Steel/VGG16/VGG16lrD_acc0-80.npy', np.array(val_acc))
+1
+import numpy as np
+2
+import pandas as pd
+3
+import matplotlib.pyplot as plt
+4
+import seaborn as sns
+5
+import cv2

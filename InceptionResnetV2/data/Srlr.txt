@@ -1,0 +1,1018 @@
+
+Jupyter Notebook
+InceptionResNetV2_Srlr (unsaved changes) Current Kernel Logo
+
+Python 3
+
+    File
+    Edit
+    View
+    Insert
+    Cell
+    Kernel
+    Widgets
+    Help
+
+1
+
+import numpy as np
+
+2
+
+import pandas as pd
+
+3
+
+import matplotlib.pyplot as plt
+
+4
+
+import seaborn as sns
+
+5
+
+import cv2
+
+6
+
+?
+
+7
+
+from sklearn.model_selection import train_test_split
+
+8
+
+?
+
+9
+
+import tensorflow as tf
+
+10
+
+from tensorflow.keras.models import Sequential
+
+11
+
+from tensorflow.keras.layers import *
+
+12
+
+from tensorflow.keras.optimizers import *
+
+13
+
+# from keras.applications.vgg16 import VGG16
+
+14
+
+from tensorflow.python.client import device_lib
+
+15
+
+?
+
+16
+
+# from keras.utils import plot_model
+
+17
+
+from tensorflow.keras.models import model_from_json
+
+18
+
+from tensorflow.keras.callbacks import TensorBoard
+
+19
+
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+20
+
+?
+
+21
+
+from tensorflow.keras.layers import Dense, Flatten, LSTM, Activation, BatchNormalization
+
+22
+
+from tensorflow.keras.layers import Dropout, RepeatVector, TimeDistributed
+
+23
+
+from tensorflow.keras import Input, Model
+
+24
+
+from tensorflow.keras.layers import Lambda
+
+25
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+The default version of TensorFlow in Colab will soon switch to TensorFlow 2.x.
+We recommend you upgrade now or ensure your notebook will continue to use TensorFlow 1.x via the %tensorflow_version 1.x magic: more info.
+1
+
+from google.colab import drive
+
+2
+
+drive.mount('/content/drive')
+
+Go to this URL in a browser: https://accounts.google.com/o/oauth2/auth?client_id=947318989803-6bn6qk8qdgf4n4g3pfee6491hc0brc4i.apps.googleusercontent.com&redirect_uri=urn%3aietf%3awg%3aoauth%3a2.0%3aoob&response_type=code&scope=email%20https%3a%2f%2fwww.googleapis.com%2fauth%2fdocs.test%20https%3a%2f%2fwww.googleapis.com%2fauth%2fdrive%20https%3a%2f%2fwww.googleapis.com%2fauth%2fdrive.photos.readonly%20https%3a%2f%2fwww.googleapis.com%2fauth%2fpeopleapi.readonly
+
+Enter your authorization code:
+··········
+Mounted at /content/drive
+
+1
+
+X = np.load('/content/drive/My Drive/Deep Steel/X_data.npy')
+
+2
+
+y = np.load('/content/drive/My Drive/Deep Steel/Y_data.npy')
+
+3
+
+def indices_to_one_hot(data, nb_classes):
+
+4
+
+    """Convert an iterable of indices to one-hot encoded labels."""
+
+5
+
+    targets = np.array(data).reshape(-1)
+
+6
+
+    return np.eye(nb_classes)[targets]
+
+7
+
+?
+
+8
+
+y = indices_to_one_hot(y.astype(int), 5)
+
+9
+
+X = X/255
+
+10
+
+print(X.shape)
+
+11
+
+print(y.shape)
+
+(1857, 224, 224)
+(1857, 5)
+
+1
+
+print(y[1])
+
+2
+
+plt.imshow(X[1], 'gray')
+
+[1. 0. 0. 0. 0.]
+
+<matplotlib.image.AxesImage at 0x7fbe3203ce48>
+
+1
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1615, random_state=42)
+
+2
+
+?
+
+3
+
+print(X_train.shape)
+
+4
+
+print(y_train.shape)
+
+5
+
+print(X_test.shape)
+
+6
+
+print(y_test.shape)
+
+7
+
+?
+
+8
+
+train_datagen = ImageDataGenerator()
+
+9
+
+?
+
+10
+
+test_datagen = ImageDataGenerator()
+
+11
+
+?
+
+12
+
+train_generator = tf.keras.preprocessing.image.NumpyArrayIterator(X_train.reshape(-1,224,224,1), y_train.reshape(-1,5), 
+
+13
+
+                                                                 train_datagen,batch_size=32, shuffle=True)
+
+14
+
+?
+
+15
+
+test_generator = tf.keras.preprocessing.image.NumpyArrayIterator(X_test.reshape(-1,224,224,1), y_test.reshape(-1,5), test_datagen,
+
+16
+
+                                                              batch_size=32, shuffle=True)
+
+(1557, 224, 224)
+(1557, 5)
+(300, 224, 224)
+(300, 5)
+
+1
+
+network = tf.keras.applications.InceptionResNetV2(include_top=True, weights=None, input_shape=(224,224,1), classes=5)
+
+2
+
+# model = Sequential()
+
+3
+
+# model.add(network)
+
+4
+
+# model.add(G())
+
+5
+
+# model.add(Dense(512))
+
+6
+
+# model.add(Dense(512))
+
+7
+
+# model.add(Dense(5))
+
+8
+
+?
+
+9
+
+#network.summary()
+
+WARNING:tensorflow:From /tensorflow-1.15.0/python3.6/tensorflow_core/python/ops/resource_variable_ops.py:1630: calling BaseResourceVariable.__init__ (from tensorflow.python.ops.resource_variable_ops) with constraint is deprecated and will be removed in a future version.
+Instructions for updating:
+If using Keras pass *_constraint arguments to layers.
+
+1
+
+network.compile(loss='categorical_crossentropy',
+
+2
+
+              optimizer=SGD(lr=0.1),
+
+3
+
+              metrics=['accuracy'])
+
+1
+
+#filepath = "/content/drive/My Drive/Deep Steel/resnet50_SrLr_best.hdf5"
+
+2
+
+# filepath = "/content/drive/My Drive/Deep Steel/InceptionV3/InceptionV3_SrLr_best.hdf5"
+
+3
+
+?
+
+4
+
+# checkpoint = ModelCheckpoint(filepath,
+
+5
+
+#                             monitor='val_acc',
+
+6
+
+#                             verbose=1,
+
+7
+
+#                             save_best_only=True,
+
+8
+
+#                             mode='max')
+
+9
+
+?
+
+10
+
+history = network.fit_generator(train_generator, epochs=2, validation_data=test_generator)#, callbacks=[checkpoint]) 
+
+Epoch 1/2
+48/49 [============================>.] - ETA: 1s - loss: 1.8207 - acc: 0.6125Epoch 1/2
+49/49 [==============================] - 80s 2s/step - loss: 1.8019 - acc: 0.6146 - val_loss: 2.1236 - val_acc: 0.1100
+Epoch 2/2
+48/49 [============================>.] - ETA: 0s - loss: 1.0075 - acc: 0.7633Epoch 1/2
+49/49 [==============================] - 33s 673ms/step - loss: 0.9933 - acc: 0.7656 - val_loss: 3.7852 - val_acc: 0.3067
+
+1
+
+import tensorflow.keras.backend as K
+
+2
+
+print(K.get_value(network.optimizer.lr))
+
+3
+
+K.set_value(network.optimizer.lr, K.get_value(network.optimizer.lr)/10)
+
+4
+
+print(K.get_value(network.optimizer.lr))
+
+0.1
+0.01
+
+1
+
+history2 = network.fit_generator(train_generator, epochs=4, validation_data=test_generator)#, callbacks=[checkpoint])
+
+Epoch 1/4
+48/49 [============================>.] - ETA: 0s - loss: 0.4324 - acc: 0.8603Epoch 1/4
+49/49 [==============================] - 34s 690ms/step - loss: 0.4277 - acc: 0.8626 - val_loss: 5.0081 - val_acc: 0.1067
+Epoch 2/4
+48/49 [============================>.] - ETA: 0s - loss: 0.2947 - acc: 0.9043Epoch 1/4
+49/49 [==============================] - 33s 676ms/step - loss: 0.2924 - acc: 0.9056 - val_loss: 5.5312 - val_acc: 0.1067
+Epoch 3/4
+48/49 [============================>.] - ETA: 0s - loss: 0.2312 - acc: 0.9266Epoch 1/4
+49/49 [==============================] - 33s 675ms/step - loss: 0.2328 - acc: 0.9261 - val_loss: 5.6254 - val_acc: 0.1067
+Epoch 4/4
+48/49 [============================>.] - ETA: 0s - loss: 0.2242 - acc: 0.9252Epoch 1/4
+49/49 [==============================] - 33s 682ms/step - loss: 0.2220 - acc: 0.9261 - val_loss: 5.3584 - val_acc: 0.1067
+
+1
+
+import tensorflow.keras.backend as K
+
+2
+
+print(K.get_value(network.optimizer.lr))
+
+3
+
+K.set_value(network.optimizer.lr, K.get_value(network.optimizer.lr)/5)
+
+4
+
+print(K.get_value(network.optimizer.lr))
+
+0.01
+0.0019999999
+
+1
+
+history2 = network.fit_generator(train_generator, epochs=8, validation_data=test_generator)#, callbacks=[checkpoint])
+
+Epoch 1/8
+48/49 [============================>.] - ETA: 0s - loss: 0.2043 - acc: 0.9351Epoch 1/8
+49/49 [==============================] - 33s 681ms/step - loss: 0.2030 - acc: 0.9358 - val_loss: 5.1957 - val_acc: 0.1067
+Epoch 2/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1768 - acc: 0.9410Epoch 1/8
+49/49 [==============================] - 33s 678ms/step - loss: 0.1798 - acc: 0.9409 - val_loss: 4.6234 - val_acc: 0.1067
+Epoch 3/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1800 - acc: 0.9370Epoch 1/8
+49/49 [==============================] - 33s 678ms/step - loss: 0.1821 - acc: 0.9371 - val_loss: 3.5378 - val_acc: 0.1467
+Epoch 4/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1793 - acc: 0.9397Epoch 1/8
+49/49 [==============================] - 33s 681ms/step - loss: 0.1823 - acc: 0.9383 - val_loss: 2.1550 - val_acc: 0.3533
+Epoch 5/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1601 - acc: 0.9462Epoch 1/8
+49/49 [==============================] - 33s 678ms/step - loss: 0.1605 - acc: 0.9454 - val_loss: 1.0382 - val_acc: 0.6100
+Epoch 6/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1595 - acc: 0.9410Epoch 1/8
+49/49 [==============================] - 33s 683ms/step - loss: 0.1634 - acc: 0.9403 - val_loss: 0.5781 - val_acc: 0.7667
+Epoch 7/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1881 - acc: 0.9344Epoch 1/8
+49/49 [==============================] - 33s 677ms/step - loss: 0.1882 - acc: 0.9332 - val_loss: 0.2816 - val_acc: 0.8733
+Epoch 8/8
+48/49 [============================>.] - ETA: 0s - loss: 0.1687 - acc: 0.9423Epoch 1/8
+49/49 [==============================] - 33s 683ms/step - loss: 0.1681 - acc: 0.9428 - val_loss: 0.1750 - val_acc: 0.9233
+
+1
+
+import tensorflow.keras.backend as K
+
+2
+
+print(K.get_value(network.optimizer.lr))
+
+3
+
+K.set_value(network.optimizer.lr, K.get_value(network.optimizer.lr)/2.5)
+
+4
+
+print(K.get_value(network.optimizer.lr))
+
+0.0019999999
+0.0007999999
+
+1
+
+history2 = network.fit_generator(train_generator, epochs=16, validation_data=test_generator)#, callbacks=[checkpoint])
+
+Epoch 1/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1815 - acc: 0.9410Epoch 1/16
+49/49 [==============================] - 33s 679ms/step - loss: 0.1807 - acc: 0.9409 - val_loss: 0.1327 - val_acc: 0.9533
+Epoch 2/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1615 - acc: 0.9495Epoch 1/16
+49/49 [==============================] - 33s 682ms/step - loss: 0.1602 - acc: 0.9499 - val_loss: 0.1285 - val_acc: 0.9600
+Epoch 3/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1751 - acc: 0.9436Epoch 1/16
+49/49 [==============================] - 33s 679ms/step - loss: 0.1780 - acc: 0.9435 - val_loss: 0.1081 - val_acc: 0.9733
+Epoch 4/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1399 - acc: 0.9554Epoch 1/16
+49/49 [==============================] - 33s 682ms/step - loss: 0.1401 - acc: 0.9557 - val_loss: 0.0987 - val_acc: 0.9767
+Epoch 5/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1672 - acc: 0.9403Epoch 1/16
+49/49 [==============================] - 33s 678ms/step - loss: 0.1647 - acc: 0.9416 - val_loss: 0.1015 - val_acc: 0.9733
+Epoch 6/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1802 - acc: 0.9390Epoch 1/16
+49/49 [==============================] - 33s 682ms/step - loss: 0.1841 - acc: 0.9377 - val_loss: 0.0999 - val_acc: 0.9733
+Epoch 7/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1718 - acc: 0.9397Epoch 1/16
+49/49 [==============================] - 33s 679ms/step - loss: 0.1727 - acc: 0.9396 - val_loss: 0.0946 - val_acc: 0.9733
+Epoch 8/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1538 - acc: 0.9482Epoch 1/16
+49/49 [==============================] - 33s 680ms/step - loss: 0.1542 - acc: 0.9480 - val_loss: 0.0956 - val_acc: 0.9733
+Epoch 9/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1644 - acc: 0.9403Epoch 1/16
+49/49 [==============================] - 33s 683ms/step - loss: 0.1646 - acc: 0.9396 - val_loss: 0.0961 - val_acc: 0.9767
+Epoch 10/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1584 - acc: 0.9436Epoch 1/16
+49/49 [==============================] - 34s 684ms/step - loss: 0.1561 - acc: 0.9448 - val_loss: 0.1071 - val_acc: 0.9733
+Epoch 11/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1652 - acc: 0.9390Epoch 1/16
+49/49 [==============================] - 33s 680ms/step - loss: 0.1635 - acc: 0.9396 - val_loss: 0.1005 - val_acc: 0.9733
+Epoch 12/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1739 - acc: 0.9397Epoch 1/16
+49/49 [==============================] - 33s 681ms/step - loss: 0.1723 - acc: 0.9396 - val_loss: 0.0967 - val_acc: 0.9767
+Epoch 13/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1621 - acc: 0.9449Epoch 1/16
+49/49 [==============================] - 34s 687ms/step - loss: 0.1623 - acc: 0.9448 - val_loss: 0.0936 - val_acc: 0.9767
+Epoch 14/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1403 - acc: 0.9521Epoch 1/16
+49/49 [==============================] - 34s 687ms/step - loss: 0.1388 - acc: 0.9525 - val_loss: 0.0960 - val_acc: 0.9767
+Epoch 15/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1572 - acc: 0.9502Epoch 1/16
+49/49 [==============================] - 33s 681ms/step - loss: 0.1555 - acc: 0.9505 - val_loss: 0.0930 - val_acc: 0.9733
+Epoch 16/16
+48/49 [============================>.] - ETA: 0s - loss: 0.1401 - acc: 0.9593Epoch 1/16
+49/49 [==============================] - 33s 681ms/step - loss: 0.1407 - acc: 0.9589 - val_loss: 0.0882 - val_acc: 0.9733
+
+1
+
+import tensorflow.keras.backend as K
+
+2
+
+print(K.get_value(network.optimizer.lr))
+
+3
+
+K.set_value(network.optimizer.lr, K.get_value(network.optimizer.lr)/1.25)
+
+4
+
+print(K.get_value(network.optimizer.lr))
+
+0.0007999999
+0.0006399999
+
+1
+
+history2 = network.fit_generator(train_generator, epochs=32, validation_data=test_generator)#, callbacks=[checkpoint])
+
+Epoch 1/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1619 - acc: 0.9462Epoch 1/32
+49/49 [==============================] - 33s 676ms/step - loss: 0.1633 - acc: 0.9454 - val_loss: 0.0940 - val_acc: 0.9767
+Epoch 2/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1472 - acc: 0.9489Epoch 1/32
+49/49 [==============================] - 34s 687ms/step - loss: 0.1460 - acc: 0.9493 - val_loss: 0.0957 - val_acc: 0.9733
+Epoch 3/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1917 - acc: 0.9318Epoch 1/32
+49/49 [==============================] - 33s 681ms/step - loss: 0.1915 - acc: 0.9326 - val_loss: 0.0940 - val_acc: 0.9733
+Epoch 4/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1435 - acc: 0.9515Epoch 1/32
+49/49 [==============================] - 33s 677ms/step - loss: 0.1425 - acc: 0.9518 - val_loss: 0.0891 - val_acc: 0.9733
+Epoch 5/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1537 - acc: 0.9508Epoch 1/32
+49/49 [==============================] - 34s 684ms/step - loss: 0.1547 - acc: 0.9505 - val_loss: 0.0872 - val_acc: 0.9733
+Epoch 6/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1535 - acc: 0.9462Epoch 1/32
+49/49 [==============================] - 33s 679ms/step - loss: 0.1542 - acc: 0.9454 - val_loss: 0.0896 - val_acc: 0.9733
+Epoch 7/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1304 - acc: 0.9534Epoch 1/32
+49/49 [==============================] - 33s 680ms/step - loss: 0.1312 - acc: 0.9531 - val_loss: 0.0846 - val_acc: 0.9733
+Epoch 8/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1557 - acc: 0.9397Epoch 1/32
+49/49 [==============================] - 34s 684ms/step - loss: 0.1538 - acc: 0.9409 - val_loss: 0.0874 - val_acc: 0.9767
+Epoch 9/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1475 - acc: 0.9502Epoch 1/32
+49/49 [==============================] - 34s 684ms/step - loss: 0.1500 - acc: 0.9493 - val_loss: 0.0875 - val_acc: 0.9767
+Epoch 10/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1294 - acc: 0.9646Epoch 1/32
+49/49 [==============================] - 33s 680ms/step - loss: 0.1288 - acc: 0.9640 - val_loss: 0.0860 - val_acc: 0.9767
+Epoch 11/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1402 - acc: 0.9456Epoch 1/32
+49/49 [==============================] - 33s 682ms/step - loss: 0.1396 - acc: 0.9461 - val_loss: 0.0850 - val_acc: 0.9767
+Epoch 12/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1300 - acc: 0.9548Epoch 1/32
+49/49 [==============================] - 34s 684ms/step - loss: 0.1292 - acc: 0.9550 - val_loss: 0.0939 - val_acc: 0.9767
+Epoch 13/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1202 - acc: 0.9633Epoch 1/32
+49/49 [==============================] - 33s 682ms/step - loss: 0.1190 - acc: 0.9640 - val_loss: 0.0856 - val_acc: 0.9733
+Epoch 14/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1483 - acc: 0.9502Epoch 1/32
+49/49 [==============================] - 33s 678ms/step - loss: 0.1463 - acc: 0.9512 - val_loss: 0.1066 - val_acc: 0.9733
+Epoch 15/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1335 - acc: 0.9607Epoch 1/32
+49/49 [==============================] - 33s 679ms/step - loss: 0.1353 - acc: 0.9602 - val_loss: 0.0825 - val_acc: 0.9700
+Epoch 16/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1402 - acc: 0.9541Epoch 1/32
+49/49 [==============================] - 33s 683ms/step - loss: 0.1389 - acc: 0.9544 - val_loss: 0.0808 - val_acc: 0.9733
+Epoch 17/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1285 - acc: 0.9580Epoch 1/32
+49/49 [==============================] - 33s 683ms/step - loss: 0.1277 - acc: 0.9583 - val_loss: 0.0802 - val_acc: 0.9700
+Epoch 18/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1319 - acc: 0.9528Epoch 1/32
+49/49 [==============================] - 33s 678ms/step - loss: 0.1299 - acc: 0.9538 - val_loss: 0.0825 - val_acc: 0.9700
+Epoch 19/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1242 - acc: 0.9607Epoch 1/32
+49/49 [==============================] - 33s 677ms/step - loss: 0.1234 - acc: 0.9608 - val_loss: 0.0816 - val_acc: 0.9700
+Epoch 20/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1359 - acc: 0.9600Epoch 1/32
+49/49 [==============================] - 33s 682ms/step - loss: 0.1345 - acc: 0.9602 - val_loss: 0.0820 - val_acc: 0.9700
+Epoch 21/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1385 - acc: 0.9541Epoch 1/32
+49/49 [==============================] - 33s 683ms/step - loss: 0.1371 - acc: 0.9544 - val_loss: 0.1040 - val_acc: 0.9700
+Epoch 22/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1558 - acc: 0.9528Epoch 1/32
+49/49 [==============================] - 33s 677ms/step - loss: 0.1534 - acc: 0.9538 - val_loss: 0.0883 - val_acc: 0.9700
+Epoch 23/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1389 - acc: 0.9534Epoch 1/32
+49/49 [==============================] - 33s 678ms/step - loss: 0.1403 - acc: 0.9525 - val_loss: 0.0904 - val_acc: 0.9733
+Epoch 24/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1542 - acc: 0.9436Epoch 1/32
+49/49 [==============================] - 33s 681ms/step - loss: 0.1555 - acc: 0.9441 - val_loss: 0.0809 - val_acc: 0.9700
+Epoch 25/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1490 - acc: 0.9554Epoch 1/32
+49/49 [==============================] - 33s 678ms/step - loss: 0.1489 - acc: 0.9550 - val_loss: 0.0796 - val_acc: 0.9700
+Epoch 26/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1272 - acc: 0.9593Epoch 1/32
+49/49 [==============================] - 33s 683ms/step - loss: 0.1296 - acc: 0.9576 - val_loss: 0.0827 - val_acc: 0.9733
+Epoch 27/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1310 - acc: 0.9574Epoch 1/32
+49/49 [==============================] - 33s 679ms/step - loss: 0.1374 - acc: 0.9544 - val_loss: 0.0789 - val_acc: 0.9733
+Epoch 28/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1190 - acc: 0.9567Epoch 1/32
+49/49 [==============================] - 33s 683ms/step - loss: 0.1182 - acc: 0.9576 - val_loss: 0.0762 - val_acc: 0.9700
+Epoch 29/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1182 - acc: 0.9613Epoch 1/32
+49/49 [==============================] - 33s 677ms/step - loss: 0.1174 - acc: 0.9621 - val_loss: 0.0807 - val_acc: 0.9733
+Epoch 30/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1507 - acc: 0.9456Epoch 1/32
+49/49 [==============================] - 34s 685ms/step - loss: 0.1498 - acc: 0.9461 - val_loss: 0.0973 - val_acc: 0.9733
+Epoch 31/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1349 - acc: 0.9574Epoch 1/32
+49/49 [==============================] - 33s 681ms/step - loss: 0.1336 - acc: 0.9576 - val_loss: 0.0771 - val_acc: 0.9733
+Epoch 32/32
+48/49 [============================>.] - ETA: 0s - loss: 0.1147 - acc: 0.9666Epoch 1/32
+49/49 [==============================] - 33s 681ms/step - loss: 0.1140 - acc: 0.9666 - val_loss: 0.0822 - val_acc: 0.9733
+
+1
+
+import tensorflow.keras.backend as K
+
+2
+
+print(K.get_value(network.optimizer.lr))
+
+3
+
+K.set_value(network.optimizer.lr, K.get_value(network.optimizer.lr)/1.25)
+
+4
+
+print(K.get_value(network.optimizer.lr))
+
+0.0006399999
+0.00051199994
+
+1
+
+history2 = network.fit_generator(train_generator, epochs=38, validation_data=test_generator)#, callbacks=[checkpoint])
+
+Epoch 1/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1290 - acc: 0.9593Epoch 1/38
+49/49 [==============================] - 33s 674ms/step - loss: 0.1289 - acc: 0.9589 - val_loss: 0.0760 - val_acc: 0.9700
+Epoch 2/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1349 - acc: 0.9580Epoch 1/38
+49/49 [==============================] - 34s 687ms/step - loss: 0.1347 - acc: 0.9576 - val_loss: 0.0747 - val_acc: 0.9733
+Epoch 3/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1309 - acc: 0.9587Epoch 1/38
+49/49 [==============================] - 33s 681ms/step - loss: 0.1310 - acc: 0.9589 - val_loss: 0.0862 - val_acc: 0.9733
+Epoch 4/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1517 - acc: 0.9502Epoch 1/38
+49/49 [==============================] - 33s 679ms/step - loss: 0.1494 - acc: 0.9512 - val_loss: 0.0822 - val_acc: 0.9700
+Epoch 5/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1380 - acc: 0.9515Epoch 1/38
+49/49 [==============================] - 34s 684ms/step - loss: 0.1373 - acc: 0.9518 - val_loss: 0.0816 - val_acc: 0.9733
+Epoch 6/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1166 - acc: 0.9652Epoch 1/38
+49/49 [==============================] - 33s 679ms/step - loss: 0.1166 - acc: 0.9653 - val_loss: 0.0788 - val_acc: 0.9733
+Epoch 7/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1159 - acc: 0.9633Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1193 - acc: 0.9621 - val_loss: 0.0754 - val_acc: 0.9733
+Epoch 8/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1231 - acc: 0.9593Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1218 - acc: 0.9602 - val_loss: 0.0761 - val_acc: 0.9733
+Epoch 9/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1255 - acc: 0.9620Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1272 - acc: 0.9608 - val_loss: 0.0765 - val_acc: 0.9700
+Epoch 10/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1335 - acc: 0.9587Epoch 1/38
+49/49 [==============================] - 33s 681ms/step - loss: 0.1329 - acc: 0.9583 - val_loss: 0.0760 - val_acc: 0.9700
+Epoch 11/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1311 - acc: 0.9593Epoch 1/38
+49/49 [==============================] - 33s 679ms/step - loss: 0.1305 - acc: 0.9589 - val_loss: 0.0782 - val_acc: 0.9733
+Epoch 12/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1140 - acc: 0.9626Epoch 1/38
+49/49 [==============================] - 33s 683ms/step - loss: 0.1132 - acc: 0.9634 - val_loss: 0.0734 - val_acc: 0.9733
+Epoch 13/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1270 - acc: 0.9580Epoch 1/38
+49/49 [==============================] - 33s 684ms/step - loss: 0.1251 - acc: 0.9589 - val_loss: 0.0804 - val_acc: 0.9700
+Epoch 14/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1163 - acc: 0.9633Epoch 1/38
+49/49 [==============================] - 33s 682ms/step - loss: 0.1233 - acc: 0.9621 - val_loss: 0.0864 - val_acc: 0.9700
+Epoch 15/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1270 - acc: 0.9567Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1265 - acc: 0.9570 - val_loss: 0.0731 - val_acc: 0.9700
+Epoch 16/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1324 - acc: 0.9593Epoch 1/38
+49/49 [==============================] - 33s 683ms/step - loss: 0.1315 - acc: 0.9595 - val_loss: 0.0731 - val_acc: 0.9733
+Epoch 17/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1106 - acc: 0.9639Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1094 - acc: 0.9647 - val_loss: 0.0731 - val_acc: 0.9733
+Epoch 18/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1200 - acc: 0.9626Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1200 - acc: 0.9627 - val_loss: 0.0720 - val_acc: 0.9733
+Epoch 19/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1201 - acc: 0.9639Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1195 - acc: 0.9640 - val_loss: 0.0741 - val_acc: 0.9733
+Epoch 20/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1180 - acc: 0.9600Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1169 - acc: 0.9602 - val_loss: 0.0716 - val_acc: 0.9733
+Epoch 21/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1218 - acc: 0.9613Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1229 - acc: 0.9608 - val_loss: 0.0699 - val_acc: 0.9733
+Epoch 22/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1148 - acc: 0.9613Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1144 - acc: 0.9615 - val_loss: 0.0713 - val_acc: 0.9733
+Epoch 23/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1316 - acc: 0.9583Epoch 1/38
+49/49 [==============================] - 33s 679ms/step - loss: 0.1314 - acc: 0.9589 - val_loss: 0.0825 - val_acc: 0.9733
+Epoch 24/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1012 - acc: 0.9672Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1033 - acc: 0.9660 - val_loss: 0.0826 - val_acc: 0.9733
+Epoch 25/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1051 - acc: 0.9666Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1058 - acc: 0.9660 - val_loss: 0.0716 - val_acc: 0.9733
+Epoch 26/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1023 - acc: 0.9725Epoch 1/38
+49/49 [==============================] - 33s 679ms/step - loss: 0.1008 - acc: 0.9730 - val_loss: 0.0716 - val_acc: 0.9733
+Epoch 27/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1188 - acc: 0.9607Epoch 1/38
+49/49 [==============================] - 33s 682ms/step - loss: 0.1178 - acc: 0.9615 - val_loss: 0.1087 - val_acc: 0.9733
+Epoch 28/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1201 - acc: 0.9620Epoch 1/38
+49/49 [==============================] - 34s 686ms/step - loss: 0.1219 - acc: 0.9608 - val_loss: 0.0733 - val_acc: 0.9733
+Epoch 29/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1229 - acc: 0.9620Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1253 - acc: 0.9602 - val_loss: 0.0709 - val_acc: 0.9733
+Epoch 30/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1146 - acc: 0.9659Epoch 1/38
+49/49 [==============================] - 33s 682ms/step - loss: 0.1129 - acc: 0.9666 - val_loss: 0.0700 - val_acc: 0.9733
+Epoch 31/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1171 - acc: 0.9613Epoch 1/38
+49/49 [==============================] - 33s 678ms/step - loss: 0.1160 - acc: 0.9621 - val_loss: 0.0706 - val_acc: 0.9733
+Epoch 32/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1104 - acc: 0.9639Epoch 1/38
+49/49 [==============================] - 33s 683ms/step - loss: 0.1112 - acc: 0.9634 - val_loss: 0.0694 - val_acc: 0.9733
+Epoch 33/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1121 - acc: 0.9593Epoch 1/38
+49/49 [==============================] - 33s 682ms/step - loss: 0.1119 - acc: 0.9589 - val_loss: 0.0707 - val_acc: 0.9733
+Epoch 34/38
+48/49 [============================>.] - ETA: 0s - loss: 0.0898 - acc: 0.9777Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.0912 - acc: 0.9775 - val_loss: 0.0709 - val_acc: 0.9733
+Epoch 35/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1197 - acc: 0.9639Epoch 1/38
+49/49 [==============================] - 33s 680ms/step - loss: 0.1185 - acc: 0.9647 - val_loss: 0.0693 - val_acc: 0.9733
+Epoch 36/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1230 - acc: 0.9613Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1212 - acc: 0.9621 - val_loss: 0.0779 - val_acc: 0.9733
+Epoch 37/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1146 - acc: 0.9580Epoch 1/38
+49/49 [==============================] - 33s 681ms/step - loss: 0.1140 - acc: 0.9583 - val_loss: 0.0684 - val_acc: 0.9733
+Epoch 38/38
+48/49 [============================>.] - ETA: 0s - loss: 0.1287 - acc: 0.9574Epoch 1/38
+49/49 [==============================] - 34s 685ms/step - loss: 0.1280 - acc: 0.9563 - val_loss: 0.0686 - val_acc: 0.9733
+
+1
+
+network.save('/content/drive/My Drive/Deep Steel/InceptionV3/InceptionV3_Srlr_final.h5')
+
+1
+
+?
+
+1
+
+import numpy as np
+
+2
+
+import pandas as pd
+
+3
+
+import matplotlib.pyplot as plt
+
+4
+
+import seaborn as sns
+
+5
+
+import cv2
+
+1
+
+import os
+
+2
+
+line2 = ""
+
+3
+
+#directory='C:/Users/hp/Desktop/Phase Detection/Report/1) Reducing Learning Rates/'
+
+4
+
+file='./data/inceptionv3_srlr.txt'
+
+5
+
+doc=open(file,'r+b')
+
+6
+
+for line in doc:
+
+7
+
+    line2+=str(line)
+
+1
+
+len(line2)
+
+94790
+
+1
+
+list01 = [line2.split()]
+
+2
+
+list01 = list01[0]
+
+3
+
+len(list01)
+
+4964
+
+1
+
+loss01 = []
+
+2
+
+acc01 = []
+
+3
+
+for i in range(len(list01)):
+
+4
+
+    if list01[i] == 'val_loss:':
+
+5
+
+        loss01.append(float(list01[i+1]))
+
+6
+
+    if list01[i] == 'val_acc:':
+
+7
+
+        acc01.append(float(list01[i+1][0:5]))
+
+1
+
+print(len(loss01))
+
+2
+
+loss01
+
+45
+
+[1.7046,
+ 2.0071,
+ 2.829,
+ 3.7502,
+ 4.4422,
+ 4.6269,
+ 4.7538,
+ 4.7135,
+ 4.562,
+ 3.4789,
+ 2.0951,
+ 1.1607,
+ 0.6093,
+ 0.2898,
+ 0.182,
+ 0.1477,
+ 0.1222,
+ 0.1071,
+ 0.1086,
+ 0.099,
+ 0.1008,
+ 0.0994,
+ 0.0862,
+ 0.0791,
+ 0.0808,
+ 0.0809,
+ 0.0822,
+ 0.0961,
+ 0.0914,
+ 0.0819,
+ 0.106,
+ 0.0828,
+ 0.0826,
+ 0.0871,
+ 0.0809,
+ 0.0804,
+ 0.0837,
+ 0.0845,
+ 0.0808,
+ 0.0819,
+ 0.0777,
+ 0.0816,
+ 0.0817,
+ 0.079,
+ 0.0812]
+
+1
+
+print(len(acc01))
+
+2
+
+acc01
+
+45
+
+[0.266,
+ 0.266,
+ 0.16,
+ 0.266,
+ 0.266,
+ 0.266,
+ 0.26,
+ 0.213,
+ 0.263,
+ 0.35,
+ 0.436,
+ 0.63,
+ 0.766,
+ 0.88,
+ 0.923,
+ 0.94,
+ 0.956,
+ 0.973,
+ 0.98,
+ 0.97,
+ 0.976,
+ 0.956,
+ 0.973,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.976,
+ 0.98,
+ 0.98,
+ 0.98,
+ 0.98,
+ 0.98,
+ 0.976]
+
+1
+
+val_loss = np.array(loss01)
+
+2
+
+val_acc = np.array(acc01)
+
+1
+
+np.save('data/inceptionv3_2_loss0-80.npy',np.array(val_loss))
+
+2
+
+np.save('data/inceptionv3__acc0-80.npy', np.array(val_acc))
+
+1
+
+a = np.load('./data/inceptionv3__acc0-80.npy')
+
+1
+
+plt.plot(a)
+
+[<matplotlib.lines.Line2D at 0x2450a8ee88>]
+
+1
+
+?
+
